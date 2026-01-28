@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NeuroHome Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .value {
+      font-size: 28px;
+      margin-top: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #334155;
+      color: white;
+    }
+
+    button.on {
+      background: #22c55e;
+    }
+
+    button.off {
+      background: #ef4444;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🏠 NeuroHome Smart Dashboard</h1>
+
+<div class="container">
+
+  <div class="card">
+    <h3>🌡 Temperature</h3>
+    <div class="value"><span id="temp">--</span> °C</div>
+  </div>
+
+  <div class="card">
+    <h3>🚶 Motion</h3>
+    <div class="value" id="motion">--</div>
+  </div>
+
+  <div class="card">
+    <h3>💡 Light</h3>
+    <button id="lightBtn" onclick="toggleDevice('light')">OFF</button>
+  </div>
+
+  <div class="card">
+    <h3>🌀 Fan</h3>
+    <button id="fanBtn" onclick="toggleDevice('fan')">OFF</button>
+  </div>
+
+  <div class="card">
+    <h3>⚡ Power</h3>
+    <div class="value"><span id="power">--</span> kW</div>
+  </div>
+
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+let deviceState = {
+  light: "off",
+  fan: "off"
+};
+
+async function updateSensors() {
+  try {
+    const res = await fetch(API + "/sensors");
+    const data = await res.json();
+
+    document.getElementById("temp").innerText = data.temp;
+    document.getElementById("motion").innerText =
+      data.motion == 1 ? "Motion Detected" : "No Motion";
+  } catch (e) {
+    console.error("Sensor error", e);
+  }
+}
+
+async function updatePower() {
+  try {
+    const res = await fetch(API + "/energy");
+    const data = await res.json();
+
+    document.getElementById("power").innerText = data.power_kw;
+  } catch (e) {
+    console.error("Power error", e);
+  }
+}
+
+async function toggleDevice(device) {
+  const newState = deviceState[device] === "on" ? "off" : "on";
+
+  await fetch(`${API}/device/livingroom/${device}/${newState}`, {
+    method: "POST"
+  });
+
+  deviceState[device] = newState;
+  updateButtons();
+  updatePower();
+}
+
+function updateButtons() {
+  const lightBtn = document.getElementById("lightBtn");
+  const fanBtn = document.getElementById("fanBtn");
+
+  lightBtn.innerText = deviceState.light.toUpperCase();
+  fanBtn.innerText = deviceState.fan.toUpperCase();
+
+  lightBtn.className = deviceState.light === "on" ? "on" : "off";
+  fanBtn.className = deviceState.fan === "on" ? "on" : "off";
+}
+
+// Auto refresh
+setInterval(updateSensors, 2000);
+setInterval(updatePower, 2000);
+
+// Initial load
+updateSensors();
+updatePower();
+updateButtons();
+</script>
+
+</body>
+</html>
